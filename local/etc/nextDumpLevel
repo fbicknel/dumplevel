@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Date::Calc qw (Parse_Date);
+
+my %levels;
+for (`/bin/cat /var/lib/dumpdates`) {
+	my ($level, $date);
+	($level, $date) = /.*? +([0-9]) (.*)/;
+	my ($y, $m, $d) = Parse_Date ($date);
+	my ($h, $mn, $s) = $date =~ /(\d\d):(\d\d):(\d\d)/;
+	my $dstring = sprintf ("%04s%02s%02s%02s%02s%02s", $y, $m, $d, $h, $mn, $s);
+	$levels{$dstring} = $level;
+}
+my %byLevel = map { $levels{$_} => $_ } keys %levels;
+my @dates;
+map { $dates[$_] = $byLevel{$_} } sort keys %byLevel;
+my @obsolete;
+my $level0 = $dates[0];
+{
+	my $hwm = 0;
+	my $i = 0;
+	for my $date (@dates) {
+		$i += 1;
+		next unless $date;
+		if ($date > $hwm) {
+			$hwm = $date if $date > $level0;
+		} else {
+			$obsolete[$i-1] = delete $dates[$i - 1];
+		}
+	}
+}
+{
+	my $i = 0;
+	print STDERR "Obsolete backups (may be deleted):\n";
+	for my $date (@obsolete) {
+		$i += 1;
+		next unless $date;
+		printf STDERR "\t%s : %s\n", $i-1, $obsolete[$i-1];
+	}
+}
+#
+#
+#
+my @hanoi = split " ", `/usr/local/etc/hanoi 9 1`;
+# But this needs to have the last item back round the front:
+unshift @hanoi, pop (@hanoi);
+my $i = 0;
+for my $level (sort keys %levels) {
+	# print STDERR "$levels{$level} : $level\n";
+	$i = 0 if $levels{$level} == 0; # level 0 backup? reset hanoi pointer
+	while (defined $hanoi[$i] and $hanoi[$i] != $levels{$level}) {
+		$i++;
+	}
+	$i += 1;
+}
+print STDERR "Next dump level is:\n";
+if ($hanoi[$i]) {
+	print "$hanoi[$i]\n";
+} else {
+	print "$hanoi[0]\n";
+}
+print STDERR "@hanoi[$i - 3 .. $i + 3]\n";

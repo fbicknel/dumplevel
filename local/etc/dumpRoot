@@ -1,0 +1,9 @@
+#!/bin/bash
+LEVEL=${1:-0}
+let LEVEL=($LEVEL + 0) # normalize to a digit (you get zero if you have any non-numeric parameter)
+[ $LEVEL -gt 9 -o $LEVEL -lt 0 ] && echo "Level must be between 0 and 9" && exit 1
+echo "performing level $LEVEL dump"
+#MAXSIZE=4595777
+MAXSIZE=1048576
+set -x
+/sbin/dump -${LEVEL} -u -M -z -B $MAXSIZE -f /mnt/win/backup/dump/dump_root_${LEVEL}_`date '+%Y%m%d-%H%M%S'`. /
